@@ -1,3 +1,8 @@
+.idea
+target/
+*.mp4
+*.iml
+
 # Compiled class file
 *.class
 
