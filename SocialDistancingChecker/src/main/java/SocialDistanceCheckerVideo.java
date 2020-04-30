@@ -64,69 +64,71 @@ public class SocialDistanceCheckerVideo {
 
         while (grabber.grab() != null) {
             Frame frame = grabber.grabImage();
-            Mat opencvMat = frame2Mat.convert(frame);
-            NativeImageLoader nil = new NativeImageLoader(yolowidth, yoloheight, 3);
-            INDArray input = nil.asMatrix(opencvMat).div(255);
+            if (frame != null) {
+                Mat opencvMat = frame2Mat.convert(frame);
+                NativeImageLoader nil = new NativeImageLoader(yolowidth, yoloheight, 3);
+                INDArray input = nil.asMatrix(opencvMat).div(255);
 
-            List<DetectedObject> objs = getPredictedObjects(input);
-            YoloUtils.nms(objs, 0.4);
+                List<DetectedObject> objs = getPredictedObjects(input);
+                YoloUtils.nms(objs, 0.4);
 
-            int w = opencvMat.cols();
-            int h = opencvMat.rows();
-            List<INDArray> centers = new ArrayList<>();
-            List<INDArray> people = new ArrayList<>();
+                int w = opencvMat.cols();
+                int h = opencvMat.rows();
+                List<INDArray> centers = new ArrayList<>();
+                List<INDArray> people = new ArrayList<>();
 
-            int centerX;
-            int centerY;
+                int centerX;
+                int centerY;
 
-            for (DetectedObject obj : objs) {
-                if (obj.getPredictedClass() == 0) {
-                //            Scale the coordinates back to full size
-                    centerX = (int) obj.getCenterX() * w / yolowidth;
-                    centerY = (int) obj.getCenterY() * h / yoloheight;
+                for (DetectedObject obj : objs) {
+                    if (obj.getPredictedClass() == 0) {
+                        //            Scale the coordinates back to full size
+                        centerX = (int) obj.getCenterX() * w / yolowidth;
+                        centerY = (int) obj.getCenterY() * h / yoloheight;
 
-                    circle(opencvMat, new Point(centerX, centerY), 3, new Scalar(0, 255, 0, 0), -1, 0, 0);
-                    //            Draw bounding boxes on opencv mat
-                    double[] xy1 = obj.getTopLeftXY();
-                    double[] xy2 = obj.getBottomRightXY();
-                    //            Scale the coordinates back to full size
-                    xy1[0] = xy1[0] * w / yolowidth;
-                    xy1[1] = xy1[1] * h / yoloheight;
-                    xy2[0] = xy2[0] * w / yolowidth;
-                    xy2[1] = xy2[1] * h / yoloheight;
+                        circle(opencvMat, new Point(centerX, centerY), 3, new Scalar(0, 255, 0, 0), -1, 0, 0);
+                        //            Draw bounding boxes on opencv mat
+                        double[] xy1 = obj.getTopLeftXY();
+                        double[] xy2 = obj.getBottomRightXY();
+                        //            Scale the coordinates back to full size
+                        xy1[0] = xy1[0] * w / yolowidth;
+                        xy1[1] = xy1[1] * h / yoloheight;
+                        xy2[0] = xy2[0] * w / yolowidth;
+                        xy2[1] = xy2[1] * h / yoloheight;
 
-                    //Draw bounding box
-                    rectangle(opencvMat, new Point((int) xy1[0], (int) xy1[1]), new Point((int) xy2[0], (int) xy2[1]), new Scalar(0, 255, 0, 0), 2, LINE_8, 0);
-                    centers.add(Nd4j.create(new float[]{(float) centerX, (float) centerY}));
-                    people.add(Nd4j.create(new float[]{(float) xy1[0], (float) xy1[1], (float) xy2[0], (float) xy2[1]}));
-                }
-            }
-            //        Calculate the euclidean distance between all pairs of center points
-            for (int i = 0; i < centers.size(); i++) {
-                for (int j = 0; j < centers.size(); j++) {
-                    double distance = euclideanDistance(centers.get(i), centers.get(j));
-                    if (distance < safeDistance && distance > 0) {
-                        line(opencvMat, new Point(centers.get(i).getInt(0), centers.get(i).getInt(1)), new Point(centers.get(j).getInt(0), centers.get(j).getInt(1)), Scalar.RED, 2, 1, 0);
-
-                        int xmin = people.get(i).getInt(0);
-                        int ymin = people.get(i).getInt(1);
-                        int xmax = people.get(i).getInt(2);
-                        int ymax = people.get(i).getInt(3);
-
-                        rectangle(opencvMat, new Point(xmin, ymin), new Point(xmax, ymax), Scalar.RED, 2, LINE_8, 0);
-                        circle(opencvMat, new Point(centers.get(i).getInt(0), centers.get(i).getInt(1)), 3, Scalar.RED, -1, 0, 0);
+                        //Draw bounding box
+                        rectangle(opencvMat, new Point((int) xy1[0], (int) xy1[1]), new Point((int) xy2[0], (int) xy2[1]), new Scalar(0, 255, 0, 0), 2, LINE_8, 0);
+                        centers.add(Nd4j.create(new float[]{(float) centerX, (float) centerY}));
+                        people.add(Nd4j.create(new float[]{(float) xy1[0], (float) xy1[1], (float) xy2[0], (float) xy2[1]}));
                     }
                 }
-            }
+                //        Calculate the euclidean distance between all pairs of center points
+                for (int i = 0; i < centers.size(); i++) {
+                    for (int j = 0; j < centers.size(); j++) {
+                        double distance = euclideanDistance(centers.get(i), centers.get(j));
+                        if (distance < safeDistance && distance > 0) {
+                            line(opencvMat, new Point(centers.get(i).getInt(0), centers.get(i).getInt(1)), new Point(centers.get(j).getInt(0), centers.get(j).getInt(1)), Scalar.RED, 2, 1, 0);
 
-            putText(opencvMat, String.format("Number of people: %d", people.size()), new Point(10, 25), 4, 0.8, Scalar.BLUE, 2, LINE_8, false);
-            recorder.record(frame2Mat.convert(opencvMat));
-            imshow("Social Distancing Checker", opencvMat);
-            //    Press Esc key to quit
-            if (waitKey(33) == 27) {
-                recorder.stop();
-                destroyAllWindows();
-                break;
+                            int xmin = people.get(i).getInt(0);
+                            int ymin = people.get(i).getInt(1);
+                            int xmax = people.get(i).getInt(2);
+                            int ymax = people.get(i).getInt(3);
+
+                            rectangle(opencvMat, new Point(xmin, ymin), new Point(xmax, ymax), Scalar.RED, 2, LINE_8, 0);
+                            circle(opencvMat, new Point(centers.get(i).getInt(0), centers.get(i).getInt(1)), 3, Scalar.RED, -1, 0, 0);
+                        }
+                    }
+                }
+
+                putText(opencvMat, String.format("Number of people: %d", people.size()), new Point(10, 25), 4, 0.8, Scalar.BLUE, 2, LINE_8, false);
+                recorder.record(frame2Mat.convert(opencvMat));
+                imshow("Social Distancing Checker", opencvMat);
+                //    Press Esc key to quit
+                if (waitKey(33) == 27) {
+                    recorder.stop();
+                    destroyAllWindows();
+                    break;
+                }
             }
         }
         recorder.stop();
