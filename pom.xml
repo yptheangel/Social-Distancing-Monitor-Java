@@ -22,7 +22,7 @@
     <properties>
         <!--Comment nd4j cuda and Uncomment nd4j native platform to use Nd4j in CPU-->
         <nd4j.backend>nd4j-native-platform</nd4j.backend>
-<!--        <nd4j.backend>nd4j-cuda-10.1-platform</nd4j.backend>-->
+        <nd4j.backend>nd4j-cuda-10.1-platform</nd4j.backend>
         <nd4j.version>1.0.0-beta6</nd4j.version>
         <dl4j.version>1.0.0-beta6</dl4j.version>
         <datavec.version>1.0.0-beta6</datavec.version>
