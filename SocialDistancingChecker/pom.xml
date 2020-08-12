@@ -20,12 +20,11 @@
         </plugins>
     </build>
     <properties>
-        <!--Comment nd4j cuda and Uncomment nd4j native platform to use Nd4j in CPU-->
         <nd4j.backend>nd4j-native-platform</nd4j.backend>
-<!--        <nd4j.backend>nd4j-cuda-10.1-platform</nd4j.backend>-->
-        <nd4j.version>1.0.0-beta6</nd4j.version>
-        <dl4j.version>1.0.0-beta6</dl4j.version>
-        <datavec.version>1.0.0-beta6</datavec.version>
+        <nd4j.backend>nd4j-cuda-10.1-platform</nd4j.backend>
+        <nd4j.version>1.0.0-beta7</nd4j.version>
+        <dl4j.version>1.0.0-beta7</dl4j.version>
+        <datavec.version>1.0.0-beta7</datavec.version>
     </properties>
 
     <repositories>
@@ -46,33 +45,22 @@
             <artifactId>${nd4j.backend}</artifactId>
             <version>${nd4j.version}</version>
         </dependency>
-        <!--Comment out dl4j cuda to run DL4J using CPU-->
-<!--        <dependency>-->
-<!--            <groupId>org.deeplearning4j</groupId>-->
-<!--            <artifactId>deeplearning4j-cuda-10.1</artifactId>-->
-<!--            <version>${dl4j.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-cuda-10.1</artifactId>
+            <version>${dl4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacv-platform</artifactId>
-            <version>1.5.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.bytedeco</groupId>
-            <artifactId>cuda-platform-redist</artifactId>
-            <version>10.1-7.6-1.5.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.bytedeco</groupId>
-            <artifactId>cuda-platform</artifactId>
-            <version>10.1-7.6-1.5.2</version>
+            <version>1.5.3</version>
         </dependency>
         <dependency>
             <groupId>org.deeplearning4j</groupId>
             <artifactId>deeplearning4j-ui</artifactId>
             <version>${dl4j.version}</version>
         </dependency>
-    <!--        Logging libraries-->
+        <!--        Logging libraries-->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

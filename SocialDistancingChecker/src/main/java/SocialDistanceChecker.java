@@ -14,17 +14,20 @@ import org.nd4j.linalg.indexing.NDArrayIndex;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.bytedeco.opencv.global.opencv_highgui.*;
 import static org.bytedeco.opencv.global.opencv_imgcodecs.imread;
 import static org.bytedeco.opencv.global.opencv_imgproc.*;
+import static org.nd4j.common.util.MathUtils.sigmoid;
 import static org.nd4j.linalg.indexing.NDArrayIndex.point;
 import static org.nd4j.linalg.ops.transforms.Transforms.euclideanDistance;
-import static org.nd4j.linalg.util.MathUtils.sigmoid;
 
 //  Author: Choo Wilson(yptheangel)
-// Special thanks to yquemener for writing yolov3 output interpreter
+//  Special thanks to yquemener for writing yolov3 output interpreter
+//  This example show a Social Distancing Monitor running on only an image
 
 public class SocialDistanceChecker {
 
@@ -32,41 +35,45 @@ public class SocialDistanceChecker {
     //        COCO has 80 classes
     private static int numClass = 80;
     private static int[][] anchors = {{10, 13}, {16, 30}, {33, 23}, {30, 61}, {62, 45}, {59, 119}, {116, 90}, {156, 198}, {373, 326}};
-    private static int yolowidth = 608;
-    private static int yoloheight = 608;
+    private static int yolowidth = 416;
+    private static int yoloheight = 416;
 
     public static void main(String[] args) throws InvalidKerasConfigurationException, IOException, UnsupportedKerasConfigurationException {
 
         int safeDistance = 80;
-        model = KerasModelImport.importKerasModelAndWeights("C:\\Users\\ChooWilson\\Desktop\\yolov3_608_fixed.h5");
+        String modelPATH = "C:\\Users\\choowilson\\Desktop\\area51\\buildYoloV3\\yolov3_416_fixed.h5";
+        model = KerasModelImport.importKerasModelAndWeights(modelPATH);
         model.init();
-        //        System.out.println(model.summary());
+        System.out.println(model.summary());
 
-        String testImagePATH = "C:\\Users\\ChooWilson\\Desktop\\crowd_topview_gray_1280x720.jpg";
-
+        String testImagePATH = "C:\\Users\\chooWilson\\Desktop\\violations.png";
         Mat opencvMat = imread(testImagePATH);
         NativeImageLoader nil = new NativeImageLoader(yolowidth, yoloheight, 3);
         INDArray input = nil.asMatrix(testImagePATH).div(255);
-
+//        DL4j defaults to NCHW, need to convert to NHWC(channel last)
+        input = input.permute(0, 2, 3, 1);
         List<DetectedObject> objs = getPredictedObjects(input);
         YoloUtils.nms(objs, 0.4);
 
         int w = opencvMat.cols();
         int h = opencvMat.rows();
+
+//        TODO:Use set instead of arraylist to ensure no duplicates!
         List<INDArray> centers = new ArrayList<>();
         List<INDArray> people = new ArrayList<>();
+        Set violators = new HashSet<INDArray>();
 
         int centerX;
         int centerY;
 
         for (DetectedObject obj : objs) {
-
+//             0 is the index of "person" in COCO dataset list of objects
             if (obj.getPredictedClass() == 0) {
                 //            Scale the coordinates back to full size
                 centerX = (int) obj.getCenterX() * w / yolowidth;
                 centerY = (int) obj.getCenterY() * h / yoloheight;
 
-                circle(opencvMat, new Point(centerX, centerY), 3, new Scalar(0, 255, 0, 0), -1, 0, 0);
+                circle(opencvMat, new Point(centerX, centerY), 2, new Scalar(0, 255, 0, 0), 2, 0, 0);
                 //            Draw bounding boxes on opencv mat
                 double[] xy1 = obj.getTopLeftXY();
                 double[] xy2 = obj.getBottomRightXY();
@@ -88,7 +95,11 @@ public class SocialDistanceChecker {
             for (int j = 0; j < centers.size(); j++) {
                 double distance = euclideanDistance(centers.get(i), centers.get(j));
                 if (distance < safeDistance && distance > 0) {
-                    line(opencvMat, new Point(centers.get(i).getInt(0), centers.get(i).getInt(1)), new Point(centers.get(j).getInt(0), centers.get(j).getInt(1)), Scalar.RED, 2, 1, 0);
+                    line(opencvMat, new Point(centers.get(i).getInt(0), centers.get(i).getInt(1)),
+                            new Point(centers.get(j).getInt(0), centers.get(j).getInt(1)), Scalar.RED, 2, 1, 0);
+
+                    violators.add(centers.get(i));
+                    violators.add(centers.get(j));
 
                     int xmin = people.get(i).getInt(0);
                     int ymin = people.get(i).getInt(1);
@@ -100,8 +111,9 @@ public class SocialDistanceChecker {
                 }
             }
         }
-        putText(opencvMat, String.format("Number of people: %d", people.size()), new Point(10, 25), 4, 0.8, new Scalar(255, 60, 0, 0), 2, LINE_8, false);
-        imshow("Social Distancing Checker", opencvMat);
+        putText(opencvMat, String.format("Number of people: %d", people.size()), new Point(10, 30), 4, 1.0, new Scalar(0, 255, 0, 0), 2, LINE_8, false);
+        putText(opencvMat, String.format("Number of violators: %d", violators.size()), new Point(10, 60), 4, 1.0, new Scalar(0, 0, 255, 0), 2, LINE_8, false);
+        imshow("Social Distancing Monitor", opencvMat);
 
         if (waitKey(0) == 27) {
             destroyAllWindows();
@@ -115,11 +127,14 @@ public class SocialDistanceChecker {
         List<DetectedObject> out = new ArrayList();
         float detectionThreshold = 0.6f;
         // Each cell had information for 3 boxes
+        // box info starts from indices {0,85,170}
         int[] boxOffsets = {0, numClass + 5, (numClass + 5) * 2};
+        int exampleNum_in_batch = 0;
+
 
         for (int layerNum = 0; layerNum < 3; layerNum++) {
-            long gridWidth = outputs[layerNum].shape()[2];
-            long gridHeight = outputs[layerNum].shape()[3];
+            long gridWidth = outputs[layerNum].shape()[1];
+            long gridHeight = outputs[layerNum].shape()[2];
             float cellWidth = yolowidth / gridWidth;
             float cellHeight = yoloheight / gridHeight;
 
@@ -132,21 +147,27 @@ public class SocialDistanceChecker {
                     int anchorInd;
 
                     for (int k = 0; k < 3; k++) {
-                        float prob = outputs[layerNum].getFloat(new int[]{0, boxOffsets[k] + 4, i, j});
+//                        exampleNum_in_batch is 0 because there is only 1 example in the batch
+//                        getFloat(),get() has 4 arguments because there are 4 indices we can use to get the single float value we want, in the order NHWC
+                        float prob = outputs[layerNum].getFloat(new int[]{exampleNum_in_batch, i, j, boxOffsets[k] + 4});
                         if (prob > detectionThreshold) {
+//                            TODO: class probabilities does not make sense
                             INDArray classes_scores = outputs[layerNum].get(
-                                    point(0),
-                                    NDArrayIndex.interval(boxOffsets[k] + 5, boxOffsets[k] + numClass + 5),
+                                    point(exampleNum_in_batch),
                                     point(i),
-                                    point(j));
-                            centerX = outputs[layerNum].getFloat(new int[]{0, boxOffsets[k] + 0, i, j});
-                            centerY = outputs[layerNum].getFloat(new int[]{0, boxOffsets[k] + 1, i, j});
-                            width = outputs[layerNum].getFloat(new int[]{0, boxOffsets[k] + 2, i, j});
-                            height = outputs[layerNum].getFloat(new int[]{0, boxOffsets[k] + 3, i, j});
+                                    point(j),
+                                    NDArrayIndex.interval(boxOffsets[k] + 5, boxOffsets[k] + numClass + 5));
+
+                            centerX = outputs[layerNum].getFloat(new int[]{exampleNum_in_batch, i, j, boxOffsets[k] + 0});
+                            centerY = outputs[layerNum].getFloat(new int[]{exampleNum_in_batch, i, j, boxOffsets[k] + 1});
+                            width = outputs[layerNum].getFloat(new int[]{exampleNum_in_batch, i, j, boxOffsets[k] + 2});
+                            height = outputs[layerNum].getFloat(new int[]{exampleNum_in_batch, i, j, boxOffsets[k] + 3});
+
                             anchorInd = (2 - layerNum) * 3 + k;
 
                             centerX = (float) ((sigmoid(centerX) + j) * cellWidth);
                             centerY = (float) ((sigmoid(centerY) + i) * cellHeight);
+
                             width = (float) (Math.exp(width)) * anchors[anchorInd][0];
                             height = (float) (Math.exp(height)) * anchors[anchorInd][1];
 
