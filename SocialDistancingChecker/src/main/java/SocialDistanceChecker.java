@@ -41,12 +41,12 @@ public class SocialDistanceChecker {
     public static void main(String[] args) throws InvalidKerasConfigurationException, IOException, UnsupportedKerasConfigurationException {
 
         int safeDistance = 80;
-        String modelPATH = "C:\\Users\\choowilson\\Desktop\\area51\\buildYoloV3\\yolov3_416_fixed.h5";
+        String modelPATH = "C:\\Users\\ChooWilson\\Downloads\\yolov3_416_fixed.h5";
         model = KerasModelImport.importKerasModelAndWeights(modelPATH);
         model.init();
         System.out.println(model.summary());
 
-        String testImagePATH = "C:\\Users\\chooWilson\\Desktop\\violations.png";
+        String testImagePATH = "C:\\Users\\ChooWilson\\Desktop\\Social-Distancing-Monitor-Java\\crowd_topview_gray_1280x720.jpg";
         Mat opencvMat = imread(testImagePATH);
         NativeImageLoader nil = new NativeImageLoader(yolowidth, yoloheight, 3);
         INDArray input = nil.asMatrix(testImagePATH).div(255);
@@ -58,7 +58,6 @@ public class SocialDistanceChecker {
         int w = opencvMat.cols();
         int h = opencvMat.rows();
 
-//        TODO:Use set instead of arraylist to ensure no duplicates!
         List<INDArray> centers = new ArrayList<>();
         List<INDArray> people = new ArrayList<>();
         Set violators = new HashSet<INDArray>();

@@ -41,27 +41,31 @@ public class SocialDistanceCheckerVideo {
     private static int[][] anchors = {{10, 13}, {16, 30}, {33, 23}, {30, 61}, {62, 45}, {59, 119}, {116, 90}, {156, 198}, {373, 326}};
     private static int yolowidth = 416;
     private static int yoloheight = 416;
+    private static boolean save2video = false;
+    private static FFmpegFrameRecorder recorder = new FFmpegFrameRecorder("output.mp4", 1280, 720, 0);
+
 
     public static void main(String[] args) throws InvalidKerasConfigurationException, IOException, UnsupportedKerasConfigurationException {
 
         int safeDistance = 80;
-        String modelPATH = "C:\\Users\\choowilson\\Desktop\\area51\\buildYoloV3\\yolov3_416_fixed.h5";
+        String modelPATH = "C:\\Users\\ChooWilson\\Downloads\\yolov3_416_fixed.h5";
         model = KerasModelImport.importKerasModelAndWeights(modelPATH);
         model.init();
         System.out.println(model.summary());
 
-        String videoPath = "C:\\Users\\choowilson\\Desktop\\area51\\testvideo.mp4";
+        String videoPath = "C:\\Users\\ChooWilson\\Desktop\\topdown.mp4";
         FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(videoPath);
         grabber.setFormat("mp4");
         grabber.start();
 
-        FFmpegFrameRecorder recorder = new FFmpegFrameRecorder("output.mp4", 1280, 720, 0);
-        recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
-        recorder.setVideoBitrate(9000);
-        recorder.setFormat("mp4");
-        recorder.setVideoQuality(0); // maximum quality
-        recorder.setFrameRate(15);
-        recorder.start();
+        if (save2video) {
+            recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
+            recorder.setVideoBitrate(9000);
+            recorder.setFormat("mp4");
+            recorder.setVideoQuality(0); // maximum quality
+            recorder.setFrameRate(15);
+            recorder.start();
+        }
 
         OpenCVFrameConverter.ToMat frame2Mat = new OpenCVFrameConverter.ToMat();
 
@@ -129,20 +133,26 @@ public class SocialDistanceCheckerVideo {
                     }
                 }
 
-                putText(opencvMat, String.format("Number of people: %d", people.size()), new Point(10, 30), 4, 1.0, new Scalar(255, 0, 0, 0), 2, LINE_8, false);
+                putText(opencvMat, String.format("Number of people: %d", people.size()), new Point(10, 30), 4, 1.0, new Scalar(0, 255, 0, 0), 2, LINE_8, false);
                 putText(opencvMat, String.format("Number of violators: %d", violators.size()), new Point(10, 60), 4, 1.0, new Scalar(0, 0, 255, 0), 2, LINE_8, false);
 
-                recorder.record(frame2Mat.convert(opencvMat));
+                if (save2video) {
+                    recorder.record(frame2Mat.convert(opencvMat));
+                }
                 imshow("Social Distancing Monitor", opencvMat);
                 //    Press Esc key to quit
                 if (waitKey(33) == 27) {
-                    recorder.stop();
+                    if (save2video) {
+                        recorder.stop();
+                    }
                     destroyAllWindows();
                     break;
                 }
             }
         }
-        recorder.stop();
+        if (save2video) {
+            recorder.stop();
+        }
     }
 
     public static List<DetectedObject> getPredictedObjects(INDArray input) {
@@ -154,7 +164,6 @@ public class SocialDistanceCheckerVideo {
         // Each cell had information for 3 boxes
         int[] boxOffsets = {0, numClass + 5, (numClass + 5) * 2};
         int exampleNum_in_batch = 0;
-
 
         for (int layerNum = 0; layerNum < 3; layerNum++) {
             long gridWidth = outputs[layerNum].shape()[1];
