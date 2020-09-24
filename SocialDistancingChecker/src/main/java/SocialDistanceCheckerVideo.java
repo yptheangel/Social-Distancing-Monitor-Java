@@ -31,7 +31,7 @@ import static org.nd4j.linalg.ops.transforms.Transforms.euclideanDistance;
 
 //  Author: Choo Wilson(yptheangel)
 //  Special thanks to yquemener for writing yolov3 output interpreter
-//  This example show a Social Distancing Monitor running on video
+//  This example shows a Social Distancing Monitor running on video
 
 public class SocialDistanceCheckerVideo {
 
@@ -53,7 +53,8 @@ public class SocialDistanceCheckerVideo {
         model.init();
         System.out.println(model.summary());
 
-        String videoPath = "C:\\Users\\ChooWilson\\Desktop\\topdown.mp4";
+//        String videoPath = "C:\\Users\\ChooWilson\\Desktop\\topdown.mp4";
+        String videoPath = "C:\\Users\\ChooWilson\\Desktop\\koreacrowd.mp4";
         FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(videoPath);
         grabber.setFormat("mp4");
         grabber.start();
@@ -139,6 +140,7 @@ public class SocialDistanceCheckerVideo {
                 if (save2video) {
                     recorder.record(frame2Mat.convert(opencvMat));
                 }
+
                 imshow("Social Distancing Monitor", opencvMat);
                 //    Press Esc key to quit
                 if (waitKey(33) == 27) {

@@ -27,7 +27,7 @@ import static org.nd4j.linalg.ops.transforms.Transforms.euclideanDistance;
 
 //  Author: Choo Wilson(yptheangel)
 //  Special thanks to yquemener for writing yolov3 output interpreter
-//  This example show a Social Distancing Monitor running on only an image
+//  This example shows a Social Distancing Monitor running on only an image
 
 public class SocialDistanceChecker {
 
